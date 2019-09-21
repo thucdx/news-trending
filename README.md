@@ -1,9 +1,11 @@
 # Course Project Instructions
 
-##Introduction
+## Introduction
+
 The course project is to give the students hands-on experience on developing some novel information retrieval and/or text mining tools. The project thus emphasizes "deliverables," and the outcome of your project should be an open-source contribution of a software tool or a component of a software tool that other people can download and use. Since the project lasts for the entire semester, it would allow the students to potentially apply all the knowledge and skills learned in the course to solve a real-world problem. Group work is encouraged, but not required (i.e., you can have a one-person team). The maximum size of a team is 3 members to avoid challenges in efficient coordination of the work by too many team members. However, a team of a larger size (up to 5 members) is also possible subject to the approval of the instructor. A typical reason for a larger team is because the project has a very natural task division among the team members so that the need for frequent interactions and coordination of team members may be minimum despite the large size of the team. Whenever possible, collaboration of multiple project teams is strongly encouraged to minimize the amount of work of each team via expertise or resource sharing, as well as to generate “combined impact” (e.g., one team may develop a crawler that can be used by another team that develops a search engine).
 
-##Grading criteria
+## Grading criteria
+
 Your project will be graded based on the following weighting scheme, corresponding to three stages of work including 1) team  search and formation; 2) proposal development; 3) project result submission. All team members will receive the same grade provided that every member has made sufficient effort (at least 20 hours of quality time to work on the project).
 Team formation (5%): Every student is required to form a team. The team shall need to designate one of the team members as the team leader who will be responsible for submitting and/or uploading the course project deliverables.
 Project proposal (10%): Each project team is required to submit a one-page project proposal around week 6, which will be graded based on completion. The instructor and TAs will read every proposal to provide feedback and suggestions so as to ensure every team to have an interesting, yet tractable project that can be realistically finished by the end of the semester. Relevant research papers or readings may be recommended.
@@ -11,12 +13,14 @@ Software code submission with documentation (65%): At the end of the semester, e
 Software usage tutorial presentation (20%): At the end of the semester, every project team will be asked to submit a short tutorial presentation (e.g., a voiced ppt presentation) to explain how the developed software is to be used. The presentation must include (1) sufficient instructions on how to install the software if applicable, (2) sufficient instructions on how to use the software, and (3) at least one example of use case so as to allow a grader (instructor, TA, or a project supervisor) to use the provided use case to test the software. The tutorial presentation would be graded based on 1) completion of the presentation (10%); and 2) result of testing the software by graders (10%). If the software passes the test, i.e., is working as expected, full points will be given; otherwise, points will be deducted from the 10% allocated to the “result of testing the software by graders.” This should be uploaded to Coursera.
 Thus your course project work would be graded primarily based on your effort. If you have followed our guidelines and completed all the required tasks, you should receive at least 90% of the total points for the project. This is to encourage the students to pay attention to time management and set realistic goals that can actually be completed by the end of the semester. The remaining 10% is based on how well your software works; a fully functioning software would be given the whole 10%, whereas a buggy software or a software with missing functions would result in losing some of the 10% of the grade. Completion of a functioning software is emphasized also due to the potential dependency between multiple projects when they are all contributing to a larger project (e.g., one team may produce a crawler to crawl data for use by another team to build a search engine).
 
-##Instructions
+## Instructions
+
 1. Form a team (due end of Week 6)
 By the end of Week 6, you should form teams. A team ideally comprises of 1 to 3 members. To form larger groups of up to 5 members, please post a private note on Piazza to get TA or instructor approval. Groups of more than 5 members are highly discouraged. The team also needs to designate a member of the team as team leader. Your team leader will be responsible for submitting and/or uploading the course project deliverables such as: 1) this form, 2) the proposal, 3) the presentation, 4) the code, etc. Please use the given link (https://forms.gle/xyhaRzJQaiqW7Wfq8) to record your team. 
 2. Pick a topic & Write a proposal (due end of Week 6)
 
-###Picking a project topic
+### Picking a project topic
+
 You can select any project topic related to this course. For reference, you can view some of the past project topics using illinois id: here. We encourage those of you who have identified a practical challenge related to your work/job to design a course project to solve the identified challenge. This would maximize the utility of your project since the outcome may be something useful for your job. However, please make sure to inform your company and obtain an approval since any software code you produced for the course project must be available to the public.
 
 When proposing a topic, try to ask yourself the following questions:
@@ -27,7 +31,8 @@ When proposing a topic, try to ask yourself the following questions:
  - How do you plan to show people that the tool to be developed is indeed useful? (You could make a demo of its function and/or report some quantitative evaluation figures.)
  - What is the minimum goal to be achieved during this semester? (Try to drop everything non-essential and only keep the function that is truly novel.)
 
-###Writing a project proposal
+### Writing a project proposal
+
 Each project team is required to write a one-page proposal before you actually go in depth on a topic and upload the proposal on Coursera. The proposal is due end of Week 6.
 In the proposal, you should address the following questions and include the names and email addresses of all the team members. One member must be designated as the project coordinator/leader for the team, so please make sure to indicate that. The project coordinator would be responsible for the coordination of the project work by the team and also communication with the instructor or TA when the team needs help. (As long as these questions are addressed, the proposal does not have to be very long. A couple of sentences for each question would be sufficient.)
 
