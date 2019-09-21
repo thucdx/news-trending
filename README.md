@@ -19,26 +19,28 @@ Thus your course project work would be graded primarily based on your effort. If
 1. **Form a team** (due end of Week 6)
 By the end of Week 6, you should form teams. A team ideally comprises of 1 to 3 members. To form larger groups of up to 5 members, please post a private note on Piazza to get TA or instructor approval. Groups of more than 5 members are highly discouraged. The team also needs to designate a member of the team as team leader. Your team leader will be responsible for submitting and/or uploading the course project deliverables such as: 1) this form, 2) the proposal, 3) the presentation, 4) the code, etc. Please use the given link (https://forms.gle/xyhaRzJQaiqW7Wfq8) to record your team. 
 2. **Pick a topic & Write a proposal** (due end of Week 6)
-**Picking a project topic:**
-You can select any project topic related to this course. For reference, you can view some of the past project topics using illinois id: here. We encourage those of you who have identified a practical challenge related to your work/job to design a course project to solve the identified challenge. This would maximize the utility of your project since the outcome may be something useful for your job. However, please make sure to inform your company and obtain an approval since any software code you produced for the course project must be available to the public.
-When proposing a topic, try to ask yourself the following questions:
- - What is exactly the function of the tool that you would like to develop?
- - Is the envisioned tool really useful? Who will benefit from such a tool? Note that the usefulness of the tool is an important grading factor, so make sure that you invest your effort on developing a really useful tool. It's fine if the tool is a very specialized tool, or only useful for a few people.
- - Does this kind of tools already exist? If similar tools exist, how is your tool different from them? Would people care about the difference? Why is this difference important?
- - Do you have some rough idea about how the target function might be achieved? (The instructor and TAs can help you answer this question, so please feel free to propose problems that you don’t yet have a clear idea about how to solve it)
- - How do you plan to show people that the tool to be developed is indeed useful? (You could make a demo of its function and/or report some quantitative evaluation figures.)
- - What is the minimum goal to be achieved during this semester? (Try to drop everything non-essential and only keep the function that is truly novel.)
-**Writing a project proposal:**
-Each project team is required to write a one-page proposal before you actually go in depth on a topic and upload the proposal on Coursera. The proposal is due end of Week 6.
-In the proposal, you should address the following questions and include the names and email addresses of all the team members. One member must be designated as the project coordinator/leader for the team, so please make sure to indicate that. The project coordinator would be responsible for the coordination of the project work by the team and also communication with the instructor or TA when the team needs help. (As long as these questions are addressed, the proposal does not have to be very long. A couple of sentences for each question would be sufficient.)
- - What is the function of the tool?
- - Who will benefit from such a tool?
- - Does this kind of tools already exist? If similar tools exist, how is your tool different from them? Would people care about the difference?
- - What existing resources can you use?
- - What techniques/algorithms will you use to develop the tool? (It's fine if you just mention some vague idea.)
- - How will you demonstrate the usefulness of your tool.
- - A very rough timeline to show when you expect to finish what. (The timeline doesn't have to be accurate.)
-For the proposed topic, please make sure that there is clearly a use case of your proposed tool. At the proposal stage, the two most important criteria to keep in mind are novelty and potential impact; an ideal project proposal should contain a clearly novel idea which would lead to a clearly useful tool for at least one real user (if the project is successful).
+    
+    **Picking a project topic:**
+    You can select any project topic related to this course. For reference, you can view some of the past project topics using illinois id: here. We encourage those of you who have identified a practical challenge related to your work/job to design a course project to solve the identified challenge. This would maximize the utility of your project since the outcome may be something useful for your job. However, please make sure to inform your company and obtain an approval since any software code you produced for the course project must be available to the public.
+    When proposing a topic, try to ask yourself the following questions:
+     - What is exactly the function of the tool that you would like to develop?
+     - Is the envisioned tool really useful? Who will benefit from such a tool? Note that the usefulness of the tool is an important grading factor, so make sure that you invest your effort on developing a really useful tool. It's fine if the tool is a very specialized tool, or only useful for a few people.
+     - Does this kind of tools already exist? If similar tools exist, how is your tool different from them? Would people care about the difference? Why is this difference important?
+     - Do you have some rough idea about how the target function might be achieved? (The instructor and TAs can help you answer this question, so please feel free to propose problems that you don’t yet have a clear idea about how to solve it)
+     - How do you plan to show people that the tool to be developed is indeed useful? (You could make a demo of its function and/or report some quantitative evaluation figures.)
+     - What is the minimum goal to be achieved during this semester? (Try to drop everything non-essential and only keep the function that is truly novel.)
+    
+    **Writing a project proposal:**
+    Each project team is required to write a one-page proposal before you actually go in depth on a topic and upload the proposal on Coursera. The proposal is due end of Week 6.
+    In the proposal, you should address the following questions and include the names and email addresses of all the team members. One member must be designated as the project coordinator/leader for the team, so please make sure to indicate that. The project coordinator would be responsible for the coordination of the project work by the team and also communication with the instructor or TA when the team needs help. (As long as these questions are addressed, the proposal does not have to be very long. A couple of sentences for each question would be sufficient.)
+     - What is the function of the tool?
+     - Who will benefit from such a tool?
+     - Does this kind of tools already exist? If similar tools exist, how is your tool different from them? Would people care about the difference?
+     - What existing resources can you use?
+     - What techniques/algorithms will you use to develop the tool? (It's fine if you just mention some vague idea.)
+     - How will you demonstrate the usefulness of your tool.
+     - A very rough timeline to show when you expect to finish what. (The timeline doesn't have to be accurate.)
+    For the proposed topic, please make sure that there is clearly a use case of your proposed tool. At the proposal stage, the two most important criteria to keep in mind are novelty and potential impact; an ideal project proposal should contain a clearly novel idea which would lead to a clearly useful tool for at least one real user (if the project is successful).
 3. **Work on the project**
 You should try to reuse any existing tools as much as possible so as to minimize the amount of work without sacrificing your goal. Discuss any problems or issues with your teammates or classmates on Piazza and leverage Piazza to collaborate with each other. Consistent with our course policy, we strongly encourage you to help each other in all the course work so as to maximize your gain of new knowledge and skills while minimizing your work as much as possible. We will do our best to help you as well. Consider documenting your work regularly. This way, you will already have a lot of things written down by the end of the semester.
 4. **Software code submission with documentation** (65%, due the last day of the final examination period)
