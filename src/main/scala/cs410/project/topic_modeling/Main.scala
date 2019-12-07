@@ -2,12 +2,13 @@ package cs410.project.topic_modeling
 
 import java.sql.Date
 
-import org.apache.spark.ml.feature.{CountVectorizer, CountVectorizerModel, StopWordsRemover, Tokenizer}
+import org.apache.spark.ml.feature.{CountVectorizer, CountVectorizerModel, IDF, StopWordsRemover, Tokenizer}
 import org.apache.spark.mllib.clustering.LDA
 import org.apache.spark.sql.{Row, SparkSession}
 import org.apache.spark.sql.functions._
 import org.apache.spark.ml.linalg.{Vector => MLVector}
 import org.apache.spark.mllib.linalg.{Vector, Vectors}
+import scala.util.matching.Regex
 import org.apache.spark.rdd.RDD
 
 object Main {
@@ -32,7 +33,12 @@ object Main {
         val id = row.getAs[String]("id")
         val publishedDate = row.getAs[Date]("webPublicationDate")
         val title = row.getAs[String]("webTitle")
-        val bodyText = row.getAs[String]("bodyText")
+        val bodyTextOrg = row.getAs[String]("bodyText")
+        val bodyText = if (bodyTextOrg != null && bodyTextOrg.nonEmpty)
+          bodyTextOrg.replaceAll("[^a-zA-Z0-9 ]", "")
+        else
+          bodyTextOrg
+
         val url = row.getAs[String]("webUrl")
         val section = row.getAs[String]("sectionName")
 
@@ -43,9 +49,9 @@ object Main {
 
     //    newsDataset.show(20)
 
-    // Count each section
-    //    newsDataset.groupBy("section")
-    //      .count().show()
+//     Count each section
+        newsDataset.groupBy("section")
+          .count().show()
 
     // tokenizer
     val tokenizer = new Tokenizer().setInputCol("bodyText").setOutputCol("words")
@@ -79,7 +85,7 @@ object Main {
 
     val oneMonthNews = filteredStopwords.filter(
       $"publishedDate" >= lit("2018-12-01")
-        && $"publishedDate" <= lit("2018-12-31")
+        && $"publishedDate" < lit("2019-01-01")
     )
     oneMonthNews.persist()
 
@@ -89,26 +95,32 @@ object Main {
     val cvModel: CountVectorizerModel = new CountVectorizer()
       .setInputCol("filtered_words")
       .setOutputCol("features")
-      .setMinDF(3)
+      .setMinDF(2)
       .fit(filteredStopwords)
 
     val afterPreprocessed = cvModel.transform(oneMonthNews)
 
     afterPreprocessed.show(20)
 
-    println(s"Vocab size: ${cvModel.vocabulary.length}")
+    //  IDF
+    val idf = new IDF()
+        .setInputCol(cvModel.getOutputCol)
+       .setOutputCol("features_tfidf")
+
+    afterPreprocessed.show(20)
+
+    val rescaled = idf.fit(afterPreprocessed).transform(afterPreprocessed)
+    rescaled.persist()
+    rescaled.show(20)
     //    println(cvModel.vocabulary.zipWithIndex.mkString(","))
-
-
-    afterPreprocessed.printSchema()
 
     val vocabArray = cvModel.vocabulary
     val vocab: Map[String, Int] = cvModel.vocabulary.zipWithIndex.toMap
 
     import sparkSession.implicits._
 
-    val documents = afterPreprocessed
-      .select("features")
+    val documents = rescaled
+      .select("features_tfidf")
       .rdd
       .map {
         case Row(features: MLVector) => Vectors.fromML(features)
@@ -119,11 +131,11 @@ object Main {
     println(documents.take(2))
 
 
-    val nTopic = 10
+    val nTopic = 6
+    val nWord = 7
     val lda = new LDA()
     lda
       .setK(nTopic)
-      .setCheckpointInterval(10)
 
     val startTime = System.nanoTime()
     val ldaModel = lda.run(documents)
@@ -132,7 +144,7 @@ object Main {
     println(s"Finished training LDA model. Summary:")
     println(s"Training time: $elapsed secs")
 
-    val topicIndices = ldaModel.describeTopics(maxTermsPerTopic = 10)
+    val topicIndices = ldaModel.describeTopics(maxTermsPerTopic = nWord)
     val topics = topicIndices.map {
       case (terms, termWeights) =>
         terms.zip(termWeights).map {
@@ -143,10 +155,10 @@ object Main {
     println(s"${nTopic} topics")
     topics.zipWithIndex.foreach {
       case (topic, i) => {
-        println(s"Topic $i")
+        println(s"Topic ${i + 1}")
         topic.foreach {
           case (term, weight) =>
-            println(s"$term\t$weight")
+            println("%-15s%1.4f".format(term, weight))
         }
         println()
       }
