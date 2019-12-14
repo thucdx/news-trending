@@ -8,9 +8,10 @@
     <artifactId>topic-modeling</artifactId>
     <version>1.0-SNAPSHOT</version>
     <properties>
-        <spark.version>2.4.3</spark.version>
-        <scala.version>2.12</scala.version>
-        <scala.version.minor>2.12.8</scala.version.minor>
+        <spark.version>2.4.4</spark.version>
+        <scala.version>2.11</scala.version>
+        <scala.version.minor>2.11.12</scala.version.minor>
+        <spark.solr.version>3.6.6</spark.solr.version>
         <maven.compiler.target>1.8</maven.compiler.target>
         <maven.compiler.source>1.8</maven.compiler.source>
         <encoding>UTF-8</encoding>
@@ -36,7 +37,28 @@
         <dependency>
             <groupId>org.apache.spark</groupId>
             <artifactId>spark-core_${scala.version}</artifactId>
-            <version>2.4.3</version>
+            <version>${spark.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.lucidworks.spark</groupId>
+            <artifactId>spark-solr</artifactId>
+            <version>${spark.solr.version}</version>
+        </dependency>
+
+        <!-- Prevent conflict in version of jackson.core when combining spark + scala 2.11 + spark-solr connector -->
+        <!-- https://mvnrepository.com/artifact/com.fasterxml.jackson.core/jackson-core -->
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-core</artifactId>
+            <version>2.9.8</version>
+        </dependency>
+
+        <!-- Fix bug *.Closure not found! -->
+        <!-- https://mvnrepository.com/artifact/com.esotericsoftware/kryo -->
+        <dependency>
+            <groupId>com.esotericsoftware</groupId>
+            <artifactId>kryo</artifactId>
+            <version>4.0.0</version>
         </dependency>
     </dependencies>
     <build>
@@ -66,6 +88,7 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
+                <version>3.8.1</version>
                 <configuration>
                     <source>1.8</source>
                     <target>1.8</target>
