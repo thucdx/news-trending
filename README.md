@@ -156,7 +156,7 @@ TL&DR:
 
 1. Index the Guardian News data set to Solr
 
-```shell script
+```sh
 java -cp target/news_topic-1.0.jar Main --mode index --inputPath input/the_guardian_articles.csv
 ```
 If indexing process was OK, you should see something like this in [http://127.0.1.1:8983/solr/#/news/query](http://127.0.1.1:8983/solr/#/news/query)
@@ -169,7 +169,7 @@ You can try different values for `--indexingStartDate` and `--indexingEndDate` t
 2. View trends in any given time range
 
 Discover `5` topics in articles published in `May 2018`, each topics show `8` words and `6` related articles
-```shell script
+```sh
 java -cp target/news_topic-1.0.jar Main --mode trend --trendStartDate 2018-05-01 --trendEndDate 2018-06-01 --topic 5 --words 8 --article 6
 ```
 The result of console is something like below:
