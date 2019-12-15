@@ -13,18 +13,15 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-package cs410.project.topic_modeling
-
 import java.sql.{Date, Timestamp}
-//import java.util.{Date => UDate}
 import java.text.SimpleDateFormat
 
-import org.apache.spark.ml.feature.{CountVectorizer, CountVectorizerModel, IDF, StopWordsRemover, Tokenizer}
+import org.apache.spark.ml.feature._
+import org.apache.spark.ml.linalg.{Vector => MLVector}
 import org.apache.spark.mllib.clustering.LDA
 import org.apache.spark.mllib.linalg.Vectors
-import org.apache.spark.ml.linalg.{Vector => MLVector}
 import org.apache.spark.sql.functions.lit
-import org.apache.spark.sql.{DataFrame, Dataset, Encoder, Encoders, Row, SparkSession}
+import org.apache.spark.sql.{DataFrame, Dataset, Row, SparkSession}
 
 import scala.util.Try
 
@@ -83,7 +80,6 @@ object Main {
       .filter(
         $"publishedDate" >= lit("2018-01-01")
           && $"publishedDate" < lit("2019-01-01"))
-      //      .na.drop(Array("bodyText"))
       .sort($"publishedDate".desc)
       .coalesce(1)
       .write
@@ -92,10 +88,10 @@ object Main {
       .save(newsDestPath)
   }
 
-
   def main(args: Array[String]): Unit = {
-    val newsPath = "/home/tdx/works/projects/cs410/guardian-news-dataset/combined_filtered.csv"
-    val newsDstPath = "filtered_news.csv"
+//    val newsPath = "/home/tdx/works/projects/cs410/guardian-news-dataset/combined_filtered.csv"
+    val newsPath = "input/the_guardian_articles.csv"
+    val newsDstPath = "output/filtered_news.csv"
     val zooKeeperHost = "localhost:9983"
     val newsCollection: String = "news"
 
@@ -105,30 +101,32 @@ object Main {
       .getOrCreate()
 
     //// Read from files
-    //    val newsDataset: Dataset[Article] = parseFromFile(ss, newsPath)
+    val newsDataset: Dataset[Article] = parseFromFile(ss, newsPath)
 
-    val newsArticle = loadArticleFromSolr(ss, zooKeeperHost, newsCollection)
-    newsArticle.show(20)
-    basicStats(newsArticle)
+    newsDataset.show(10)
 
-    // LDA
-    newsArticle.persist()
-    val rangedTopics = performTopicModeling(ss, newsArticle, "2018-09-01", "2018-11-01", 5, 7)
-
-    rangedTopics.foreach(println(_))
-
-    import ss.implicits._
-
-    println("About to save topic to Solr")
-    //		val rangedTopicDF = ss.sparkContext.parallelize(rangedTopics).toDF()
-    //		saveTopicToSolr(ss, zooKeeperHost, "news_topic", rangedTopicDF)
-
-    println("Show related article")
-    // First topic
-    rangedTopics.foreach(topic => {
-      println(s"Topic : ${topic.words.mkString(" ")}")
-      showRelatedArticles(ss, topic, zooKeeperHost, newsCollection, maxArticle = 5)
-    })
+//    val newsArticle = loadArticleFromSolr(ss, zooKeeperHost, newsCollection)
+//    newsArticle.show(20)
+//    basicStats(newsArticle)
+//
+//    // LDA
+//    newsArticle.persist()
+//    val rangedTopics = performTopicModeling(ss, newsArticle, "2018-09-01", "2018-11-01", 5, 7)
+//
+//    rangedTopics.foreach(println(_))
+//
+//    import ss.implicits._
+//
+//    println("About to save topic to Solr")
+//    //		val rangedTopicDF = ss.sparkContext.parallelize(rangedTopics).toDF()
+//    //		saveTopicToSolr(ss, zooKeeperHost, "news_topic", rangedTopicDF)
+//
+//    println("Show related article")
+//    // First topic
+//    rangedTopics.foreach(topic => {
+//      println(s"Topic : ${topic.words.mkString(" ")}")
+//      showRelatedArticles(ss, topic, zooKeeperHost, newsCollection, maxArticle = 5)
+//    })
 
     // Close
     ss.close()
@@ -209,14 +207,6 @@ object Main {
     val startDate = sdf.format(rangedTopic.startDate)
     val endDate = sdf.format(rangedTopic.endDate)
 
-    val options = Map(
-      "zkhost" -> zkHost,
-      "collection" -> articleCollection,
-      "query" -> s"bodyText: $words",
-      "filters" -> s"publishedDate: [$startDate TO $endDate]",
-      "rows" -> maxArticle
-    )
-
     val relatedArticles = ss.read.format("solr")
       .option("zkhost", zkHost)
       .option("collection", articleCollection)
@@ -225,7 +215,7 @@ object Main {
       .option("rows", maxArticle)
       .load()
       .flatMap(mapRowToArticle)
-      .select("title","publishedDate", "url", "section")
+      .select("title", "publishedDate", "url", "section")
 
     relatedArticles.show(5, truncate = false)
   }

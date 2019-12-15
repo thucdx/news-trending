@@ -13,8 +13,6 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-package cs410.project.topic_modeling
-
 import java.sql.Date
 
-case class Article(id: String, publishedDate: Date, title: String, bodyText: String, url: String, section: String)
+case class RangedTopic(startDate: Date, endDate: Date, words: List[String], weights: List[Double])
