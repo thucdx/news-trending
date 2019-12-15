@@ -1,5 +1,15 @@
 # Finding trends in news
 
+
+*CS410 Final Project, Fall 2019*
+
+Total member: `1`
+
+| Member | Email   | Role                      |
+|--------|-------|---------------------------|
+| Thuc Dinh | thucd2@illinois.edu| Team leader |
+
+
 ## What this tool can do
 The tool help find popular topics in the news during specified period.
 User need to specify the start time, the end time and number of topics he/she expected to see. 
@@ -19,15 +29,15 @@ However, this project use a [Kaggle's public dataset of the Guardian news](https
 ## Download and install requirements
 Below is instruction to install Apache Solr on `Ubuntu 19.10`. Other OSes or distributions of Linux may have a little bit different.
 The project use:
- 1. `Apache Solr 8.2.0`
- 2. `Java 1.8`
- 3. `Apache Maven 3.6.1`
- 4. `Scala 2.11.12`
- 5. `Apache Spark 2.4.4`
+ + `Apache Solr 8.2.0`
+ + `Java 1.8`
+ + `Apache Maven 3.6.1`
+ + `Scala 2.11.12`
+ + `Apache Spark 2.4.4`
 
-+ Install Apache Solr 8.2.0
+1. Install Apache Solr 8.2.0
 
-Download Apache Solr 8.2.0
+   + Download Apache Solr 8.2.0
 
 ```sh
 cd $YOUR_WORKING_DIR
@@ -35,7 +45,7 @@ wget https://archive.apache.org/dist/lucene/solr/8.2.0/solr-8.2.0.tgz
 tar -xzvf solr-8.2.0.tgz
 ```
 
-Start Solr in Cloud mode with 2 nodes (running locally and listening to different ports: `8983` (default) and `7574`):
+   + Start Solr in Cloud mode with 2 nodes (running locally and listening to different ports: `8983` (default) and `7574`):
 ```sh
 cd $YOUR_WORKING_DIR/solr-8.2.0
 
@@ -54,7 +64,7 @@ You should see something like below
 In the `node` column, there are two nodes: `7574_solr`, `8983_solr`. These indicate two node running and listening to 2 different specified ports.
 That means we are good to go.
 
-- Create collections in Solr 
+   + Create collections in Solr 
 
 We need to create two collection: `news` collection to store news articles and `news_topic` top store the discovered topics for later use.
 
@@ -66,11 +76,14 @@ bin/solr create -c news  -s 2 -rf 2
 bin/solr create -c news_topic -s 2 -rf 1
 ```
 
-- install java, maven????
+2. Install Java 8, maven 3.6.1
 
-- other component
+Follow the link: https://linuxize.com/post/how-to-install-apache-maven-on-ubuntu-18-04/
 
-Build projects
+
+3. Build projects from source
+
+After install maven successfully, we can build project from source
 ```sh
 cd $PROJECT_DIR
 
@@ -121,16 +134,26 @@ Usage: news_topic-VERSION.jar Main [options]
 ```
 
 *You don't need* to remember all these options, just need to know the tool has two main features:
-1. Index (`--mode index`): store news to Solr.
-   + `--inputPath` option: the path of file containing news (csv file)
-   + `--newCollection` to define name of collection in Solr we are going to index to
-   + `--indexingStartDate`, `--indexingEndDate` define the period of time we need to index articles of this range to Solr (and leave articles published in other ranges untouched)
+1. Index (`--mode index`): Store articles to Solr and allowed to do fulltext search. 
+Some other options:
+   + `--inputPath <value>` option: the path of file containing news (csv file)
+   + `--newCollection <value>` to define name of collection in Solr we are going to index to
+   + `--indexingStartDate <value>`, `--indexingEndDate <value>` define the period of time we need to index articles of this range to Solr (and leave articles published in other ranges untouched)
 
-2. Finding trend (`--mode trend`): find trends / discover topics in any given period of time and show related articles of these topics.
+2. Finding trend (`--mode trend`): Find trends / discover topics in any given period of time and show related articles of these topics.
+Some other options:
+   + `--trendStartDate <value>`
+   + `--trendEndDate <value>` 
+   + `--topic <value>`
+   + `--words <value>`
+   + `--article <value>`
 
 TL&DR:
-1. Index the guardian news to Solr
-```
+----
+
+
+1. Index the Guardian News data set to Solr
+```shell script
 java -cp target/news_topic-1.0.jar Main --mode index --inputPath input/the_guardian_articles.csv
 ```
 If indexing process was OK, you should see something like this in [http://127.0.1.1:8983/solr/#/news/query](http://127.0.1.1:8983/solr/#/news/query)
@@ -138,7 +161,6 @@ If indexing process was OK, you should see something like this in [http://127.0.
 ![Indexing successfully](imgs/index_news_ok.png)
 
 You can try different values for `--indexingStartDate` and `--indexingEndDate` to index more articles to Solr. By default, we indexed only articles published in `2018`.
-
 
 
 2. View trends in any given time range
@@ -149,7 +171,7 @@ java -cp target/news_topic-1.0.jar Main --mode trend --trendStartDate 2018-05-01
 ```
 The result of console is something like below:
 
-```shell script
+```sh
 ======================
 FINDING TRENDS
          Solr's news collection: news
@@ -196,5 +218,8 @@ Related article:
 |Chris Froome should not be listed with cycling greats says Hinault           |2018-05-30   |https://www.theguardian.com/sport/2018/may/29/chris-froome-cycling-bernard-hinault-giro-ditalia                    |Sport  |
 +-----------------------------------------------------------------------------+-------------+-------------------------------------------------------------------------------------------------------------------+-------+
 
+
 ```
 ## How the tool was developed
+
+To be continue...
