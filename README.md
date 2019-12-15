@@ -35,7 +35,7 @@ The project use:
  + `Scala 2.11.12`
  + `Apache Spark 2.4.4`
 
-1. Install Apache Solr 8.2.0
++ Install Apache Solr 8.2.0
 
    + Download Apache Solr 8.2.0
 
@@ -46,7 +46,7 @@ tar -xzvf solr-8.2.0.tgz
 ```
 
    + Start Solr in Cloud mode with 2 nodes (running locally and listening to different ports: `8983` (default) and `7574`):
-```sh
+```shell script
 cd $YOUR_WORKING_DIR/solr-8.2.0
 
 # start Solr running in SolrCloud mode on default port (8983)
@@ -68,7 +68,7 @@ That means we are good to go.
 
 We need to create two collection: `news` collection to store news articles and `news_topic` top store the discovered topics for later use.
 
-```sh
+```shell script
 # create news collection with 2 shards and replication factor = 2
 bin/solr create -c news  -s 2 -rf 2
 
@@ -76,15 +76,16 @@ bin/solr create -c news  -s 2 -rf 2
 bin/solr create -c news_topic -s 2 -rf 1
 ```
 
-2. Install Java 8, maven 3.6.1
++ Install Java 8, maven 3.6.1
 
 Follow the link: https://linuxize.com/post/how-to-install-apache-maven-on-ubuntu-18-04/
 
 
-3. Build projects from source
++ Build projects from source
 
 After install maven successfully, we can build project from source
-```sh
+
+```shell script
 cd $PROJECT_DIR
 
 # package with maven
@@ -93,7 +94,7 @@ mvn clean package
 
 If the build succeeded, there will be a file named `news_topic-1.0.jar` in `$PROJECT_DIR/target`
 
-- Download the Guardian news dataset
++ Download the Guardian news dataset
 
     1. Download from Kaggle public dataset: https://www.kaggle.com/sameedhayat/guardian-news-dataset
 ([another link](https://drive.google.com/open?id=1QwE3VqnCMjFeiRYT6NV1rs6AC8FnnvzW))
@@ -112,7 +113,7 @@ java -cp target/news_topic-1.0.jar Main [options]
 ```
 
 Full list of argument can be found in the table below:
-```sh
+```shell script
 Finding trends in news v1.0
 Usage: news_topic-VERSION.jar Main [options]
 
@@ -153,6 +154,7 @@ TL&DR:
 
 
 1. Index the Guardian News data set to Solr
+
 ```shell script
 java -cp target/news_topic-1.0.jar Main --mode index --inputPath input/the_guardian_articles.csv
 ```
