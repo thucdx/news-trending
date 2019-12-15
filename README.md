@@ -7,7 +7,7 @@ Total member: `1`
 
 | Member | Email   | Role                      |
 |--------|-------|---------------------------|
-| Thuc Dinh | thucd2@illinois.edu| Team leader |
+| Thuc Dinh | thucd2@illinois.edu| Team leader & Member  |
 
 
 ## What this tool can do
