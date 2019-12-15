@@ -30,331 +30,331 @@ import scala.util.Try
 
 // scalastyle:off
 object Main {
-	private val MAX_SOLR_FIELD_LENGTH = 32766
-	private val DEFAULT_NEWS_INPUT_SCHEMA = " null INT, apiUrl STRING, bodyText STRING, id STRING, isHosted Boolean, pillarId String," +
-		" pillarName STRING, sectionId String, sectionName String, type String, webPublicationDate Date," +
-		" webTitle String, webUrl String, filtered_bodyText String"
-
-	def parseFromFile(sparkSession: SparkSession, newsSourcePath: String): Dataset[Article] = {
-		import sparkSession.implicits._
-
-		val newsDataset: Dataset[Article] = sparkSession
-			.read
-			.options(Map("header" -> "true"))
-			.schema(DEFAULT_NEWS_INPUT_SCHEMA)
-			.csv(newsSourcePath)
-			.flatMap(row => {
-				val id = row.getAs[String]("id")
-				val publishedDate = row.getAs[Date]("webPublicationDate")
-				val title = Try(row.getAs[String]("webTitle")
-					replaceAll("[^a-zA-Z0-9 \n]", "")
-				).getOrElse("N/A")
-
-				val bodyTextOrg = row.getAs[String]("bodyText")
-				val bodyText = if (bodyTextOrg != null && bodyTextOrg.nonEmpty) {
-					// Remove special character
-					val text = bodyTextOrg.replaceAll("[^a-zA-Z0-9 \n]", "").trim
-					if (text.length >= MAX_SOLR_FIELD_LENGTH) { // maximum number of chars allowed to index in Solr
-						text.substring(0, MAX_SOLR_FIELD_LENGTH)
-					} else {
-						text
-					}
-				} else
-					bodyTextOrg
-
-				val url = row.getAs[String]("webUrl")
-				val section = row.getAs[String]("sectionName")
-
-				if (bodyText != null && bodyText.nonEmpty)
-					Some(Article(id, publishedDate, title, bodyText, url, section))
-				else
-					None
-			})
-
-		newsDataset
-	}
-
-	def cleanAndSave(sparkSession: SparkSession, newsSourcePath: String, newsDestPath: String): Unit = {
-		import sparkSession.implicits._
-
-		val newsDataset: Dataset[Article] = parseFromFile(sparkSession, newsSourcePath)
-
-		newsDataset
-			.filter(
-				$"publishedDate" >= lit("2018-01-01")
-					&& $"publishedDate" < lit("2019-01-01"))
-			//      .na.drop(Array("bodyText"))
-			.sort($"publishedDate".desc)
-			.coalesce(1)
-			.write
-			.format("csv")
-			.option("header", "true")
-			.save(newsDestPath)
-	}
-
-
-	def main(args: Array[String]): Unit = {
-		val newsPath = "/home/tdx/works/projects/cs410/guardian-news-dataset/combined_filtered.csv"
-		val newsDstPath = "filtered_news.csv"
-		val zooKeeperHost = "localhost:9983"
-		val newsCollection: String = "news"
-
-		val ss = SparkSession.builder()
-			.appName("Topic Modeling with LDA")
-			.master("local[4]")
-			.getOrCreate()
-
-		//// Read from files
-		//    val newsDataset: Dataset[Article] = parseFromFile(ss, newsPath)
-
-		val newsArticle = loadArticleFromSolr(ss, zooKeeperHost, newsCollection)
-		newsArticle.show(20)
-		basicStats(newsArticle)
-
-		// LDA
-		newsArticle.persist()
-		val rangedTopics = performTopicModeling(ss, newsArticle, "2018-10-01", "2018-11-01", 5, 7)
-
-		rangedTopics.foreach(println(_))
-
-		import ss.implicits._
-
-		println("About to save topic to Solr")
-		//		val rangedTopicDF = ss.sparkContext.parallelize(rangedTopics).toDF()
-		//		saveTopicToSolr(ss, zooKeeperHost, "news_topic", rangedTopicDF)
-
-		println("Show related article")
-		// First topic
-		rangedTopics.foreach(topic => {
-			println(s"Topic : ${topic.words.mkString(" ")}")
-			showRelatedArticles(ss, topic, zooKeeperHost, newsCollection, maxArticle = 5)
-		})
-
-		// Close
-		ss.close()
-	}
-
-	private def basicStats(collection: Dataset[Article]): Unit = {
-		println(s"Total docs: ${collection.count()}")
-		collection
-			.groupBy("section")
-			.count()
-			.show()
-	}
-
-	def saveTopicToSolr(ss: SparkSession, zkHost: String, collection: String, topics: DataFrame): Unit = {
-		val options = Map(
-			"zkhost" -> zkHost,
-			"collection" -> collection,
-			"gen_uniq_key" -> "true",
-			"soft_commit_secs" -> "5"
-		)
-
-		topics
-			.write
-			.format("solr")
-			.options(options)
-			.mode(org.apache.spark.sql.SaveMode.Overwrite)
-			.save
-	}
-
-	private def loadArticleFromSolr(ss: SparkSession, zkHost: String, collection: String): Dataset[Article] = {
-		import ss.implicits._
-
-		val options = Map(
-			"zkhost" -> zkHost,
-			"collection" -> collection
-		)
-
-		val solrDF = ss.read
-			.format("solr")
-			.options(options)
-			.load
-
-		solrDF.printSchema()
-		solrDF.createOrReplaceTempView("news")
-		ss.sql("SELECT * FROM news").show(10)
-
-		val ds = ss.read.format("solr")
-			.options(options)
-			.load
-			.flatMap(mapRowToArticle)
-
-		ds
-	}
-
-	def mapRowToArticle(row: Row): Option[Article] = {
-		Try {
-			val id = row.getAs[String]("id")
-			val publishedDate = new Date(row.getAs[Timestamp]("publishedDate").getTime)
-			val title = row.getAs[String]("title")
-			val url = row.getAs[String]("url")
-			val section = row.getAs[String]("section")
-			val bodyText = row.getAs[String]("bodyText")
-
-			Article(id, publishedDate, title, bodyText, url, section)
-		}.toOption
-	}
-
-	private def showRelatedArticles(ss: SparkSession,
-	                                rangedTopic: RangedTopic,
-	                                zkHost: String,
-	                                articleCollection: String,
-	                                maxArticle: Int = 5): Unit = {
-		import ss.implicits._
-
-		val words = rangedTopic.words.mkString(" ")
-		val sdf = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'");
-
-		val startDate = sdf.format(rangedTopic.startDate)
-		val endDate = sdf.format(rangedTopic.endDate)
-
-		val options = Map(
-			"zkhost" -> zkHost,
-			"collection" -> articleCollection,
-			"query" -> s"bodyText: $words",
-			"filters" -> s"publishedDate: [$startDate TO $endDate]",
-			"rows" -> maxArticle
-		)
-
-		val relatedArticles = ss.read.format("solr")
-			.option("zkhost", zkHost)
-			.option("collection", articleCollection)
-			.option("query", s"bodyText: $words")
-			.option("filters", s"publishedDate: [$startDate TO $endDate]")
-			.option("rows", maxArticle)
-			.load()
-			.flatMap(mapRowToArticle)
-			.select("title","publishedDate", "url", "section")
-
-		relatedArticles.show(5, truncate = false)
-	}
-
-	private def performTopicModeling(ss: SparkSession, newsDataset: Dataset[Article],
-	                                 startDateStr: String, endDateStr: String,
-	                                 nTopic: Int = 5, nWord: Int = 7): List[RangedTopic] = {
-		import ss.implicits._
-
-		val simpleDateFormat = new SimpleDateFormat("yyyy-MM-dd")
-		val startDate: Date = new Date(simpleDateFormat.parse(startDateStr).getTime)
-		val endDate: Date = new Date(simpleDateFormat.parse(endDateStr).getTime)
-
-		println(startDate + " " + endDate)
-
-		// tokenizer
-		val tokenizer = new Tokenizer().setInputCol("bodyText").setOutputCol("words")
-		val newsWithTokenizer = tokenizer.transform(newsDataset)
-
-		//    newsWithTokenizer.show(20)
-		val countNullWords = newsWithTokenizer
-			.filter($"words".isNull)
-			.count()
-
-		// Remove stop words
-		val stopWords = new StopWordsRemover()
-			.setInputCol(tokenizer.getOutputCol)
-			.setOutputCol("filtered_words")
-
-		println("After filtered stop words:")
-
-		val filteredStopwords = stopWords.transform(newsWithTokenizer)
-
-		//    filteredStopwords.show(20)
-		//    filteredStopwords.printSchema()
-
-		// Count number of rows which have null filtered_words
-		val totalNullFilteredWords = filteredStopwords
-			.filter($"filtered_words".isNull)
-			.count()
-
-		println(s"Total Null filtered words: ${totalNullFilteredWords}")
-
-		val oneMonthNews = filteredStopwords.filter(
-			$"publishedDate" >= lit(startDateStr)
-				&& $"publishedDate" < lit(endDateStr)
-		)
-		oneMonthNews.persist()
-
-		println(s"Total article in [$startDateStr, $endDateStr): ${oneMonthNews.count()}")
-
-		// CountVectorizer
-		val cvModel: CountVectorizerModel = new CountVectorizer()
-			.setInputCol("filtered_words")
-			.setOutputCol("features")
-			.setMinDF(2)
-			.fit(filteredStopwords)
-
-		val afterPreprocessed = cvModel.transform(oneMonthNews)
-
-		afterPreprocessed.show(20)
-
-		//  IDF
-		val idf = new IDF()
-			.setInputCol(cvModel.getOutputCol)
-			.setOutputCol("features_tfidf")
-
-		afterPreprocessed.show(20)
-
-		val rescaled = idf.fit(afterPreprocessed).transform(afterPreprocessed)
-		rescaled.persist()
-		rescaled.show(20)
-		//    println(cvModel.vocabulary.zipWithIndex.mkString(","))
-
-		val vocabArray = cvModel.vocabulary
-		val vocab: Map[String, Int] = cvModel.vocabulary.zipWithIndex.toMap
-
-		val documents = rescaled
-			.select("features_tfidf")
-			.rdd
-			.map {
-				case Row(features: MLVector) => Vectors.fromML(features)
-			}
-			.zipWithIndex()
-			.map(_.swap)
-
-		println(documents.take(2))
-
-		val lda = new LDA()
-		lda
-			.setK(nTopic)
-
-		val startTime = System.nanoTime()
-		val ldaModel = lda.run(documents)
-		val elapsed = (System.nanoTime() - startTime) / 1e9
-
-		println(s"Finished training LDA model. Summary:")
-		println(s"Training time: $elapsed secs")
-
-		val topicIndices = ldaModel.describeTopics(maxTermsPerTopic = nWord)
-		val topics = topicIndices.map {
-			case (terms, termWeights) =>
-				terms.zip(termWeights).map {
-					case (term, weight) => (vocabArray(term.toInt), weight)
-				}
-		}
-
-		val rangedTopics = topicIndices.map {
-			case (termIds, weights) => {
-				val words = termIds.map(vocabArray(_)).toArray
-				RangedTopic(startDate, endDate, words.toList, weights.toList)
-			}
-		}.toList
-
-		println(s"${nTopic} topics")
-		topics.zipWithIndex.foreach {
-			case (topic, i) => {
-				println(s"Trending #${i + 1}")
-
-				topic.foreach {
-					case (term, weight) =>
-						println("%-15s%1.4f".format(term, weight))
-				}
-				println()
-			}
-		}
-
-		rangedTopics
-	}
+  private val MAX_SOLR_FIELD_LENGTH = 32766
+  private val DEFAULT_NEWS_INPUT_SCHEMA = " null INT, apiUrl STRING, bodyText STRING, id STRING, isHosted Boolean, pillarId String," +
+    " pillarName STRING, sectionId String, sectionName String, type String, webPublicationDate Date," +
+    " webTitle String, webUrl String, filtered_bodyText String"
+
+  def parseFromFile(sparkSession: SparkSession, newsSourcePath: String): Dataset[Article] = {
+    import sparkSession.implicits._
+
+    val newsDataset: Dataset[Article] = sparkSession
+      .read
+      .options(Map("header" -> "true"))
+      .schema(DEFAULT_NEWS_INPUT_SCHEMA)
+      .csv(newsSourcePath)
+      .flatMap(row => {
+        val id = row.getAs[String]("id")
+        val publishedDate = row.getAs[Date]("webPublicationDate")
+        val title = Try(row.getAs[String]("webTitle")
+          replaceAll("[^a-zA-Z0-9 \n]", "")
+        ).getOrElse("N/A")
+
+        val bodyTextOrg = row.getAs[String]("bodyText")
+        val bodyText = if (bodyTextOrg != null && bodyTextOrg.nonEmpty) {
+          // Remove special character
+          val text = bodyTextOrg.replaceAll("[^a-zA-Z0-9 \n]", "").trim
+          if (text.length >= MAX_SOLR_FIELD_LENGTH) { // maximum number of chars allowed to index in Solr
+            text.substring(0, MAX_SOLR_FIELD_LENGTH)
+          } else {
+            text
+          }
+        } else
+          bodyTextOrg
+
+        val url = row.getAs[String]("webUrl")
+        val section = row.getAs[String]("sectionName")
+
+        if (bodyText != null && bodyText.nonEmpty)
+          Some(Article(id, publishedDate, title, bodyText, url, section))
+        else
+          None
+      })
+
+    newsDataset
+  }
+
+  def cleanAndSave(sparkSession: SparkSession, newsSourcePath: String, newsDestPath: String): Unit = {
+    import sparkSession.implicits._
+
+    val newsDataset: Dataset[Article] = parseFromFile(sparkSession, newsSourcePath)
+
+    newsDataset
+      .filter(
+        $"publishedDate" >= lit("2018-01-01")
+          && $"publishedDate" < lit("2019-01-01"))
+      //      .na.drop(Array("bodyText"))
+      .sort($"publishedDate".desc)
+      .coalesce(1)
+      .write
+      .format("csv")
+      .option("header", "true")
+      .save(newsDestPath)
+  }
+
+
+  def main(args: Array[String]): Unit = {
+    val newsPath = "/home/tdx/works/projects/cs410/guardian-news-dataset/combined_filtered.csv"
+    val newsDstPath = "filtered_news.csv"
+    val zooKeeperHost = "localhost:9983"
+    val newsCollection: String = "news"
+
+    val ss = SparkSession.builder()
+      .appName("Topic Modeling with LDA")
+      .master("local[4]")
+      .getOrCreate()
+
+    //// Read from files
+    //    val newsDataset: Dataset[Article] = parseFromFile(ss, newsPath)
+
+    val newsArticle = loadArticleFromSolr(ss, zooKeeperHost, newsCollection)
+    newsArticle.show(20)
+    basicStats(newsArticle)
+
+    // LDA
+    newsArticle.persist()
+    val rangedTopics = performTopicModeling(ss, newsArticle, "2018-09-01", "2018-11-01", 5, 7)
+
+    rangedTopics.foreach(println(_))
+
+    import ss.implicits._
+
+    println("About to save topic to Solr")
+    //		val rangedTopicDF = ss.sparkContext.parallelize(rangedTopics).toDF()
+    //		saveTopicToSolr(ss, zooKeeperHost, "news_topic", rangedTopicDF)
+
+    println("Show related article")
+    // First topic
+    rangedTopics.foreach(topic => {
+      println(s"Topic : ${topic.words.mkString(" ")}")
+      showRelatedArticles(ss, topic, zooKeeperHost, newsCollection, maxArticle = 5)
+    })
+
+    // Close
+    ss.close()
+  }
+
+  private def basicStats(collection: Dataset[Article]): Unit = {
+    println(s"Total docs: ${collection.count()}")
+    collection
+      .groupBy("section")
+      .count()
+      .show()
+  }
+
+  def saveTopicToSolr(ss: SparkSession, zkHost: String, collection: String, topics: DataFrame): Unit = {
+    val options = Map(
+      "zkhost" -> zkHost,
+      "collection" -> collection,
+      "gen_uniq_key" -> "true",
+      "soft_commit_secs" -> "5"
+    )
+
+    topics
+      .write
+      .format("solr")
+      .options(options)
+      .mode(org.apache.spark.sql.SaveMode.Overwrite)
+      .save
+  }
+
+  private def loadArticleFromSolr(ss: SparkSession, zkHost: String, collection: String): Dataset[Article] = {
+    import ss.implicits._
+
+    val options = Map(
+      "zkhost" -> zkHost,
+      "collection" -> collection
+    )
+
+    val solrDF = ss.read
+      .format("solr")
+      .options(options)
+      .load
+
+    solrDF.printSchema()
+    solrDF.createOrReplaceTempView("news")
+    ss.sql("SELECT * FROM news").show(10)
+
+    val ds = ss.read.format("solr")
+      .options(options)
+      .load
+      .flatMap(mapRowToArticle)
+
+    ds
+  }
+
+  def mapRowToArticle(row: Row): Option[Article] = {
+    Try {
+      val id = row.getAs[String]("id")
+      val publishedDate = new Date(row.getAs[Timestamp]("publishedDate").getTime)
+      val title = row.getAs[String]("title")
+      val url = row.getAs[String]("url")
+      val section = row.getAs[String]("section")
+      val bodyText = row.getAs[String]("bodyText")
+
+      Article(id, publishedDate, title, bodyText, url, section)
+    }.toOption
+  }
+
+  private def showRelatedArticles(ss: SparkSession,
+                                  rangedTopic: RangedTopic,
+                                  zkHost: String,
+                                  articleCollection: String,
+                                  maxArticle: Int = 5): Unit = {
+    import ss.implicits._
+
+    val words = rangedTopic.words.mkString(" ")
+    val sdf = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'");
+
+    val startDate = sdf.format(rangedTopic.startDate)
+    val endDate = sdf.format(rangedTopic.endDate)
+
+    val options = Map(
+      "zkhost" -> zkHost,
+      "collection" -> articleCollection,
+      "query" -> s"bodyText: $words",
+      "filters" -> s"publishedDate: [$startDate TO $endDate]",
+      "rows" -> maxArticle
+    )
+
+    val relatedArticles = ss.read.format("solr")
+      .option("zkhost", zkHost)
+      .option("collection", articleCollection)
+      .option("query", s"bodyText: $words")
+      .option("filters", s"publishedDate: [$startDate TO $endDate]")
+      .option("rows", maxArticle)
+      .load()
+      .flatMap(mapRowToArticle)
+      .select("title","publishedDate", "url", "section")
+
+    relatedArticles.show(5, truncate = false)
+  }
+
+  private def performTopicModeling(ss: SparkSession, newsDataset: Dataset[Article],
+                                   startDateStr: String, endDateStr: String,
+                                   nTopic: Int = 5, nWord: Int = 7): List[RangedTopic] = {
+    import ss.implicits._
+
+    val simpleDateFormat = new SimpleDateFormat("yyyy-MM-dd")
+    val startDate: Date = new Date(simpleDateFormat.parse(startDateStr).getTime)
+    val endDate: Date = new Date(simpleDateFormat.parse(endDateStr).getTime)
+
+    println(startDate + " " + endDate)
+
+    // tokenizer
+    val tokenizer = new Tokenizer().setInputCol("bodyText").setOutputCol("words")
+    val newsWithTokenizer = tokenizer.transform(newsDataset)
+
+    //    newsWithTokenizer.show(20)
+    val countNullWords = newsWithTokenizer
+      .filter($"words".isNull)
+      .count()
+
+    // Remove stop words
+    val stopWords = new StopWordsRemover()
+      .setInputCol(tokenizer.getOutputCol)
+      .setOutputCol("filtered_words")
+
+    println("After filtered stop words:")
+
+    val filteredStopwords = stopWords.transform(newsWithTokenizer)
+
+    //    filteredStopwords.show(20)
+    //    filteredStopwords.printSchema()
+
+    // Count number of rows which have null filtered_words
+    val totalNullFilteredWords = filteredStopwords
+      .filter($"filtered_words".isNull)
+      .count()
+
+    println(s"Total Null filtered words: ${totalNullFilteredWords}")
+
+    val oneMonthNews = filteredStopwords.filter(
+      $"publishedDate" >= lit(startDateStr)
+        && $"publishedDate" < lit(endDateStr)
+    )
+    oneMonthNews.persist()
+
+    println(s"Total article in [$startDateStr, $endDateStr): ${oneMonthNews.count()}")
+
+    // CountVectorizer
+    val cvModel: CountVectorizerModel = new CountVectorizer()
+      .setInputCol("filtered_words")
+      .setOutputCol("features")
+      .setMinDF(2)
+      .fit(filteredStopwords)
+
+    val afterPreprocessed = cvModel.transform(oneMonthNews)
+
+    afterPreprocessed.show(20)
+
+    //  IDF
+    val idf = new IDF()
+      .setInputCol(cvModel.getOutputCol)
+      .setOutputCol("features_tfidf")
+
+    afterPreprocessed.show(20)
+
+    val rescaled = idf.fit(afterPreprocessed).transform(afterPreprocessed)
+    rescaled.persist()
+    rescaled.show(20)
+    //    println(cvModel.vocabulary.zipWithIndex.mkString(","))
+
+    val vocabArray = cvModel.vocabulary
+    val vocab: Map[String, Int] = cvModel.vocabulary.zipWithIndex.toMap
+
+    val documents = rescaled
+      .select("features_tfidf")
+      .rdd
+      .map {
+        case Row(features: MLVector) => Vectors.fromML(features)
+      }
+      .zipWithIndex()
+      .map(_.swap)
+
+    println(documents.take(2))
+
+    val lda = new LDA()
+    lda
+      .setK(nTopic)
+
+    val startTime = System.nanoTime()
+    val ldaModel = lda.run(documents)
+    val elapsed = (System.nanoTime() - startTime) / 1e9
+
+    println(s"Finished training LDA model. Summary:")
+    println(s"Training time: $elapsed secs")
+
+    val topicIndices = ldaModel.describeTopics(maxTermsPerTopic = nWord)
+    val topics = topicIndices.map {
+      case (terms, termWeights) =>
+        terms.zip(termWeights).map {
+          case (term, weight) => (vocabArray(term.toInt), weight)
+        }
+    }
+
+    val rangedTopics = topicIndices.map {
+      case (termIds, weights) => {
+        val words = termIds.map(vocabArray(_)).toArray
+        RangedTopic(startDate, endDate, words.toList, weights.toList)
+      }
+    }.toList
+
+    println(s"${nTopic} topics")
+    topics.zipWithIndex.foreach {
+      case (topic, i) => {
+        println(s"Trending #${i + 1}")
+
+        topic.foreach {
+          case (term, weight) =>
+            println("%-15s%1.4f".format(term, weight))
+        }
+        println()
+      }
+    }
+
+    rangedTopics
+  }
 }
 
 // scalastyle:on
