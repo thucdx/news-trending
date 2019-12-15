@@ -9,7 +9,7 @@ object ArgParser {
     import builder._
 
     OParser.sequence(
-      programName(s"news_topic-VERSION.jar"),
+      programName(s"news_topic-VERSION.jar Main"),
       head("Finding trends in news", "v1.0"),
 
       opt[String]('m', "mode")
