@@ -47,7 +47,7 @@ tar -xzvf solr-8.2.0.tgz
 
    + Start Solr in Cloud mode with 2 nodes (running locally and listening to different ports: `8983` (default) and `7574`):
    
-```
+```sh
 cd $YOUR_WORKING_DIR/solr-8.2.0
 
 # start Solr running in SolrCloud mode on default port (8983)
@@ -69,7 +69,7 @@ That means we are good to go.
 
 We need to create two collection: `news` collection to store news articles and `news_topic` top store the discovered topics for later use.
 
-```shell script
+```sh
 # create news collection with 2 shards and replication factor = 2
 bin/solr create -c news  -s 2 -rf 2
 
@@ -86,7 +86,7 @@ Follow the link: https://linuxize.com/post/how-to-install-apache-maven-on-ubuntu
 
 After install maven successfully, we can build project from source
 
-```shell script
+```sh
 cd $PROJECT_DIR
 
 # package with maven
@@ -114,7 +114,7 @@ java -cp target/news_topic-1.0.jar Main [options]
 ```
 
 Full list of argument can be found in the table below:
-```shell script
+```sh
 Finding trends in news v1.0
 Usage: news_topic-VERSION.jar Main [options]
 
