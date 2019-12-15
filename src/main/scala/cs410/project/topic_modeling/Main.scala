@@ -112,18 +112,23 @@ object Main {
 		basicStats(newsArticle)
 
 		// LDA
-		val businessArticles = newsArticle.filter(_.section == "Business")
-
-		businessArticles.persist()
-		val rangedTopics = performTopicModeling(ss, newsArticle, "2018-10-01", "2019-12-01")
+		newsArticle.persist()
+		val rangedTopics = performTopicModeling(ss, newsArticle, "2018-10-01", "2018-11-01", 5, 7)
 
 		rangedTopics.foreach(println(_))
 
 		import ss.implicits._
 
 		println("About to save topic to Solr")
-		val rangedTopicDF = ss.sparkContext.parallelize(rangedTopics).toDF()
-		saveToSolr(ss, zooKeeperHost, "news_topic", rangedTopicDF)
+		//		val rangedTopicDF = ss.sparkContext.parallelize(rangedTopics).toDF()
+		//		saveTopicToSolr(ss, zooKeeperHost, "news_topic", rangedTopicDF)
+
+		println("Show related article")
+		// First topic
+		rangedTopics.foreach(topic => {
+			println(s"Topic : ${topic.words.mkString(" ")}")
+			showRelatedArticles(ss, topic, zooKeeperHost, newsCollection, maxArticle = 5)
+		})
 
 		// Close
 		ss.close()
@@ -137,14 +142,16 @@ object Main {
 			.show()
 	}
 
-	def saveToSolr(ss: SparkSession, zkHost: String, collection: String, topics: DataFrame): Unit = {
+	def saveTopicToSolr(ss: SparkSession, zkHost: String, collection: String, topics: DataFrame): Unit = {
 		val options = Map(
 			"zkhost" -> zkHost,
 			"collection" -> collection,
-			"gen_uniq_key" -> "true"
+			"gen_uniq_key" -> "true",
+			"soft_commit_secs" -> "5"
 		)
 
-		topics.write
+		topics
+			.write
 			.format("solr")
 			.options(options)
 			.mode(org.apache.spark.sql.SaveMode.Overwrite)
@@ -171,17 +178,56 @@ object Main {
 		val ds = ss.read.format("solr")
 			.options(options)
 			.load
-			.map(row => {
-				val id = row.getAs[String]("id")
-				val publishedDate = new Date(row.getAs[Timestamp]("publishedDate").getTime)
-				val title = row.getAs[String]("title")
-				val url = row.getAs[String]("url")
-				val section = row.getAs[String]("section")
-				val bodyText = row.getAs[String]("bodyText")
-				Article(id, publishedDate, title, bodyText, url, section)
-			})
+			.flatMap(mapRowToArticle)
 
 		ds
+	}
+
+	def mapRowToArticle(row: Row): Option[Article] = {
+		Try {
+			val id = row.getAs[String]("id")
+			val publishedDate = new Date(row.getAs[Timestamp]("publishedDate").getTime)
+			val title = row.getAs[String]("title")
+			val url = row.getAs[String]("url")
+			val section = row.getAs[String]("section")
+			val bodyText = row.getAs[String]("bodyText")
+
+			Article(id, publishedDate, title, bodyText, url, section)
+		}.toOption
+	}
+
+	private def showRelatedArticles(ss: SparkSession,
+	                                rangedTopic: RangedTopic,
+	                                zkHost: String,
+	                                articleCollection: String,
+	                                maxArticle: Int = 5): Unit = {
+		import ss.implicits._
+
+		val words = rangedTopic.words.mkString(" ")
+		val sdf = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'");
+
+		val startDate = sdf.format(rangedTopic.startDate)
+		val endDate = sdf.format(rangedTopic.endDate)
+
+		val options = Map(
+			"zkhost" -> zkHost,
+			"collection" -> articleCollection,
+			"query" -> s"bodyText: $words",
+			"filters" -> s"publishedDate: [$startDate TO $endDate]",
+			"rows" -> maxArticle
+		)
+
+		val relatedArticles = ss.read.format("solr")
+			.option("zkhost", zkHost)
+			.option("collection", articleCollection)
+			.option("query", s"bodyText: $words")
+			.option("filters", s"publishedDate: [$startDate TO $endDate]")
+			.option("rows", maxArticle)
+			.load()
+			.flatMap(mapRowToArticle)
+			.select("title","publishedDate", "url", "section")
+
+		relatedArticles.show(5, truncate = false)
 	}
 
 	private def performTopicModeling(ss: SparkSession, newsDataset: Dataset[Article],
@@ -290,7 +336,7 @@ object Main {
 		val rangedTopics = topicIndices.map {
 			case (termIds, weights) => {
 				val words = termIds.map(vocabArray(_)).toArray
-				RangedTopic(startDate, endDate, words, weights)
+				RangedTopic(startDate, endDate, words.toList, weights.toList)
 			}
 		}.toList
 

@@ -17,4 +17,4 @@ package cs410.project.topic_modeling
 
 import java.sql.Date
 
-case class RangedTopic(startDate: Date, endDate: Date, words: Array[String], weights: Array[Double])
+case class RangedTopic(startDate: Date, endDate: Date, words: List[String], weights: List[Double])
