@@ -27,7 +27,7 @@ This connector was developed by lucidworks and can be founded at [https://github
 However, this project use a [Kaggle's public dataset of the Guardian news](https://www.kaggle.com/sameedhayat/guardian-news-dataset) containing about 53.000 articles from the beginning of 2016 to the end of 2018.
 
 ## Download and install requirements
-Below is instruction to install Apache Solr on `Ubuntu 19.10`. Other OSes or distributions of Linux may have a little bit different.
+Below is instruction to install Apache Solr on `Ubuntu 19.10`. Other OSes or distributions of Linux may have a little bit difference.
 The project use:
  + `Apache Solr 8.2.0`
  + `Java 1.8`
@@ -340,7 +340,7 @@ Perform LDA algorithm
 
 + Finding `top-n` related articles for a given topic
 
-We get from topic the top words, and use this words to search for articles. Ranking these articles by scores and retrieve the top.
+We get from topic the top words, and use these words to search for articles. Ranking these articles by scores and retrieve the top.
 Leverage Solr's search power to do this task.
 
 ```scala
