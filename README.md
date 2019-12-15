@@ -225,4 +225,129 @@ Related article:
 ```
 ## How the tool was developed
 
-To be continue...
+The tool use Spark-Solr connector to Read from and Write to Solr. The Spark side use Spark-ML to perform LDA algorithm to discover topics.
+
+Details on these key features are detailed below:
+
++ Read data from Solr to Spark
+
+With Spark-Solr connector, Solr could be think of as a data source to Spark SQL. It's as easy to read from and write to Solr from Spark as with other data sources.
+```scala
+def loadArticleFromSolr(ss: SparkSession, zkHost: String, newsCollection: String): Dataset[Article] = {
+    import ss.implicits._
+
+    val options = Map(
+      "zkhost" -> zkHost,
+      "collection" -> newsCollection
+    )
+
+    val ds = ss.read.format("solr")
+      .options(options)
+      .load
+      .flatMap(rowToArticle)
+
+    ds
+  }
+```
+
++ Save data from Spark to Solr
+```scala
+def saveToSolr(ss: SparkSession, zkHost: String, collection: String, dataDF: DataFrame): Unit = {
+    val options = Map(
+      "zkhost" -> zkHost,
+      "collection" -> collection,
+      "gen_uniq_key" -> "true",
+      "soft_commit_secs" -> "5"
+    )
+
+    dataDF
+      .write
+      .format("solr")
+      .options(options)
+      .mode(org.apache.spark.sql.SaveMode.Overwrite)
+      .save
+  }
+```
+
++ Perform LDA algorithm to find topics
+
+We do some basic transformation first.
+
+Tokenizer
+```scala
+// TOKENIZER
+    val tokenizer = new Tokenizer().setInputCol("bodyText").setOutputCol("words")
+    val newsWithTokenizer = tokenizer.transform(newsDataset)
+
+    val countNullWords = newsWithTokenizer
+      .filter($"words".isNull)
+      .count()
+```
+
+Then remove stopwords, currently using default english "stopwords" of Spark's MLLib.
+```scala
+    // REMOVE STOPWORDS
+    val stopWords = new StopWordsRemover()
+      .setInputCol(tokenizer.getOutputCol)
+      .setOutputCol("filtered_words")
+
+
+    val filteredStopwords = stopWords.transform(newsWithTokenizer)
+```
+
+Converts a text document to a sparse vector of token counts
+```scala
+    // VECTORISED
+    val cvModel: CountVectorizerModel = new CountVectorizer()
+      .setInputCol("filtered_words")
+      .setOutputCol("features")
+      .setMinDF(2)
+      .fit(filteredStopwords)
+
+    val afterPreprocessed = cvModel.transform(newsInRange)
+```
+
+Penalize popular terms/tokens by using Inverse Document Frequency (IDF)
+```scala
+    //  IDF
+    val idf = new IDF()
+      .setInputCol(cvModel.getOutputCol)
+      .setOutputCol("features_tfidf")
+
+    val rescaled = idf.fit(afterPreprocessed).transform(afterPreprocessed)
+    rescaled.persist()
+
+    val vocabArray = cvModel.vocabulary
+
+    val documents = rescaled
+      .select("features_tfidf")
+      .rdd
+      .map {
+        case Row(features: MLVector) => Vectors.fromML(features)
+      }
+      .zipWithIndex()
+      .map(_.swap)
+```
+
+Perform LDA algorithm
+```scala
+    val lda = new LDA()
+    lda.setK(nTopic)
+
+    val ldaModel = lda.run(documents)
+    val topicIndices = ldaModel.describeTopics(maxTermsPerTopic = nWord)
+```
+
++ Finding `top-n` related articles for a given topic
+
+We get from topic the top words, and use this words to search for articles. Ranking these articles by scores and retrieve the top.
+Leverage Solr's search power to do this task.
+
+```scala
+val words = rangedTopic.words.mkString(" ")
+ val relatedArticles = ss.read.format("solr")
+        .[....]
+      .option("query", s"bodyText: $words")     //  <= using topic's words to search with Solr
+      .option("solr.params", "sort=score desc") //  <= ranking articles by score in descending order 
+      .option("max_rows", maxArticle)           //  <= retrieving some top related articles    
+```
