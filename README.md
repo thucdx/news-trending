@@ -46,7 +46,8 @@ tar -xzvf solr-8.2.0.tgz
 ```
 
    + Start Solr in Cloud mode with 2 nodes (running locally and listening to different ports: `8983` (default) and `7574`):
-```shell script
+   
+```
 cd $YOUR_WORKING_DIR/solr-8.2.0
 
 # start Solr running in SolrCloud mode on default port (8983)
