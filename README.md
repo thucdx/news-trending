@@ -67,14 +67,11 @@ That means we are good to go.
 
    + Create collections in Solr 
 
-We need to create two collection: `news` collection to store news articles and `news_topic` top store the discovered topics for later use.
+We need to create two collection: `news` collection to store news articles 
 
 ```sh
 # create news collection with 2 shards and replication factor = 2
 bin/solr create -c news  -s 2 -rf 2
-
-# create news_topic collection with 2 shards and replication factor = 1
-bin/solr create -c news_topic -s 2 -rf 1
 ```
 
 + Install Java 8, maven 3.6.1
