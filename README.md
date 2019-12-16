@@ -135,7 +135,9 @@ Usage: news_topic-VERSION.jar Main [options]
 ```
 
 *You don't need* to remember all these options, just need to know the tool has two main features:
-1. Index (`--mode extract`): Store articles to Solr and allowed to do fulltext search. 
+1. Index (`--mode extract`): Extract all articles published during `[extractStartDate, extractEndDate)` from input source,
+perform cleaning and save to csv file before indexing to Solr. We then use Solr's `post` tool to index this csv file
+
 Some other options:
    + `--inputPath <value>` option: the path of file containing news (csv file)
    + `--outputPath <value>` option: output path of extracted articles (csv file) 
