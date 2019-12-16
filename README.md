@@ -118,110 +118,122 @@ Full list of argument can be found in the table below:
 Finding trends in news v1.0
 Usage: news_topic-VERSION.jar Main [options]
 
-  -m, --mode <value>       Mode to run: index/trend
+  -m, --mode <value>       Mode to run: extract/trend
   -p, --inputPath <value>  Path of csv file containing articles to index. Default = input/the_guardian_articles.csv
-  -o, --newsCollection <value>
+  -o, --outputPath <value>
+                           Path to store extract articles. Default = output/
+  -c, --newsCollection <value>
                            Name of collection to index to Solr. Default: news
-  --indexingStartDate <value>
-                           Indexing start date, format: yyyy-MM-dd. Default 2018-01-01
-  --indexingEndDate <value>
-                           Indexing end date, format: yyyy-MM-dd. Default 2019-01-01
+  --extractStartDate <value>
+                           Extracting start date, format: yyyy-MM-dd. Default 2018-01-01
+  --extractEndDate <value>
+                           Extracting end date, format: yyyy-MM-dd. Default 2019-01-01
   --trendStartDate <value>
                            Trend start date, format: yyyy-MM-dd. Default 2018-11-01
   --trendEndDate <value>   Trend end date, format: yyyy-MM-dd. Default 2018-12-01
   -z, --zookeeper <value>  Zookeeper url, default: localhost:9983
-  -t, --topic <value>      Number of topic. Default = 5
-  -w, --words <value>      Number of word per topic to show. Default = 7
-  -a, --article <value>    Number of related article to show for each topic. Default = 5
+  -t, --topics <value>     Number of topics. Default = 5
+  -w, --words <value>      Number of words per topic to show. Default = 7
+  -a, --articles <value>   Number of related articles to show for each topic. Default = 5
 ```
 
 *You don't need* to remember all these options, just need to know the tool has two main features:
-1. Index (`--mode index`): Store articles to Solr and allowed to do fulltext search. 
+1. Index (`--mode extract`): Store articles to Solr and allowed to do fulltext search. 
 Some other options:
    + `--inputPath <value>` option: the path of file containing news (csv file)
-   + `--newCollection <value>` to define name of collection in Solr we are going to index to
-   + `--indexingStartDate <value>`, `--indexingEndDate <value>` define the period of time we need to index articles of this range to Solr (and leave articles published in other ranges untouched)
+   + `--outputPath <value>` option: output path of extracted articles (csv file) 
+   + `--extractStartDate <value>`, `--extractEndDate <value>` define the period of time we need to index articles of this range to Solr (and leave articles published in other ranges untouched)
 
 2. Finding trend (`--mode trend`): Find trends / discover topics in any given period of time and show related articles of these topics.
 Some other options:
    + `--trendStartDate <value>`
    + `--trendEndDate <value>` 
-   + `--topic <value>`
+   + `--topics <value>`
    + `--words <value>`
-   + `--article <value>`
+   + `--articles <value>`
 
 TL&DR:
 ----
 
 
-1. Index the Guardian News data set to Solr
+1. Extract the Guardian News data set, and cleaning before indexing to Solr
 
 ```sh
-java -cp target/news_topic-1.0.jar Main --mode index --inputPath input/the_guardian_articles.csv
+java -cp target/news_topic-1.0.jar Main --mode extract --inputPath input/the_guardian_articles.csv
 ```
+
+If extracting process was OK, you should see file named `part-*.csv` in `output/` folder
+
+Indexing to Solr with `post` tool
+```sh
+cd $SOLR_DIR
+bin/post -c news $PROJECT_DIR/output/*.csv
+```
+
 If indexing process was OK, you should see something like this in [http://127.0.1.1:8983/solr/#/news/query](http://127.0.1.1:8983/solr/#/news/query)
 
 ![Indexing successfully](imgs/index_news_ok.png)
 
-You can try different values for `--indexingStartDate` and `--indexingEndDate` to index more articles to Solr. By default, we indexed only articles published in `2018`.
 
+You can try different values for `--extractStartDate` and `--extractEndDate` to index more articles to Solr. By default, we indexed only articles published in `2018`.
 
 2. View trends in any given time range
 
 Discover `5` topics in articles published in `May 2018`, each topics show `8` words and `6` related articles
+
 ```sh
-java -cp target/news_topic-1.0.jar Main --mode trend --trendStartDate 2018-05-01 --trendEndDate 2018-06-01 --topic 5 --words 8 --article 6
+java -cp target/news_topic-1.0.jar Main --mode trend --trendStartDate 2018-05-01 --trendEndDate 2018-06-01 --topics 5 --words 8 --articles 6
 ```
 The result of console is something like below:
 
 ```sh
 ======================
 FINDING TRENDS
-         Solr's news collection: news
-                 startDate = 2018-05-01 
-                 endDate = 2018-06-01
-                 number of topic: 5
-                 word per topic: 8
-                 sample related articles: 6
+	 Solr's news collection: news
+		 startDate = 2018-05-01 
+		 endDate = 2018-06-01
+		 number of topics: 5
+		 words per topic: 8
+		 related articles: 6
 Total article in date range [2018-05-01, 2018-06-01) : 1260
 Finished training LDA model.
-Training time: 7.126380941 secs
+Training time: 7.130969228 secs
 Showing 5 topics and related articles: 
 #################################
 Topic 1 / 5
 Topic word with its weight:
-Map(eu -> 0.0016, election -> 0.0015, company -> 0.0017, oil -> 0.0021, party -> 0.0023, brexit -> 0.0019, vote -> 0.0019, labour -> 0.0036)
+List((brexit,0.0044), (labour,0.0039), (customs,0.0032), (eu,0.0032), (trade,0.0028), (party,0.0027), (growth,0.0025), (uk,0.0023))
 Related article: 
-+--------------------------------------------------------------------+-------------+---------------------------------------------------------------------------------------------------------------------+--------+
-|title                                                               |publishedDate|url                                                                                                                  |section |
-+--------------------------------------------------------------------+-------------+---------------------------------------------------------------------------------------------------------------------+--------+
-|Labour MPs fear of Brexit voters could be unfounded study says      |2018-05-29   |https://www.theguardian.com/politics/2018/may/29/labour-mps-fear-brexit-voters-unfounded-study                       |Politics|
-|How local election night unfolded in key races                      |2018-05-04   |https://www.theguardian.com/politics/2018/may/04/local-elections-how-night-unfolded-key-races                        |Politics|
-|Labour should be trouncing the Tories readers on the local elections|2018-05-04   |https://www.theguardian.com/politics/2018/may/04/labour-should-be-trouncing-the-tories-readers-on-the-local-elections|Politics|
-|Jeremy Corbyn urged to clarify Labours position on Brexit           |2018-05-20   |https://www.theguardian.com/politics/2018/may/20/jeremy-corbyn-urged-to-clarify-labours-position-on-brexit           |Politics|
-|All future Labour peers must back abolition of Lords says Corbyn    |2018-05-23   |https://www.theguardian.com/politics/2018/may/23/all-future-labour-peers-must-back-abolition-of-lords-says-corbyn    |Politics|
-|Key conclusions from a hazy night in English local elections        |2018-05-04   |https://www.theguardian.com/politics/2018/may/04/hazy-night-english-local-elections-the-key-conclusions              |Politics|
-+--------------------------------------------------------------------+-------------+---------------------------------------------------------------------------------------------------------------------+--------+
++-----------------------------------------------------------------------+-------------+-------------------------------------------------------------------------------------------------------------------------------+--------+
+|title                                                                  |publishedDate|url                                                                                                                            |section |
++-----------------------------------------------------------------------+-------------+-------------------------------------------------------------------------------------------------------------------------------+--------+
+|Brexit weekly briefing crunch time on customs union approaches         |2018-05-01   |https://www.theguardian.com/politics/2018/may/01/brexit-weekly-briefing-crunch-time-on-customs-union-approaches                |Politics|
+|Brexit vote has cost each UK household 900 says Mark Carney            |2018-05-22   |https://www.theguardian.com/politics/2018/may/22/brexit-vote-cost-uk-mark-carney-bank-of-england                               |Politics|
+|Brexit weekly briefing Boris Johnson launches customs union broadside  |2018-05-08   |https://www.theguardian.com/politics/2018/may/08/brexit-weekly-briefing-boris-johnson-launches-customs-union-broadside         |Politics|
+|Brexit weekly briefing Irish border problem dominates debate           |2018-05-22   |https://www.theguardian.com/politics/2018/may/22/brexit-weekly-briefing-irish-border-problem-dominates-debate                  |Politics|
+|Local elections haunted by Brexit offer little comfort to right or left|2018-05-06   |https://www.theguardian.com/politics/2018/may/05/local-elections-brexit-little-comfort-right-or-left                           |Politics|
+|Labours choice to fight Lewisham East may be decided by Brexit views   |2018-05-18   |https://www.theguardian.com/politics/2018/may/18/labour-choice-to-fight-lewisham-east-byelection-may-be-decided-by-brexit-views|Politics|
++-----------------------------------------------------------------------+-------------+-------------------------------------------------------------------------------------------------------------------------------+--------+
 
-... Many more ...
+
+..... MANY TEXT ....
+
 
 #################################
 Topic 5 / 5
 Topic word with its weight:
-Map(quarter -> 0.0020, froome -> 0.0039, giro -> 0.0020, race -> 0.0023, yates -> 0.0032, game -> 0.0020, dumoulin -> 0.0026, warriors -> 0.0025)
+List((rugby,0.0028), (players,0.0024), (season,0.0020), (cup,0.0019), (min,0.0019), (game,0.0018), (saracens,0.0018), (exeter,0.0017))
 Related article: 
-+-----------------------------------------------------------------------------+-------------+-------------------------------------------------------------------------------------------------------------------+-------+
-|title                                                                        |publishedDate|url                                                                                                                |section|
-+-----------------------------------------------------------------------------+-------------+-------------------------------------------------------------------------------------------------------------------+-------+
-|Giro dItalia Froome wins stunning stage 19 to take pink jersey as it happened|2018-05-25   |https://www.theguardian.com/sport/live/2018/may/25/giro-ditalia-2018-stage-19-live                                 |Sport  |
-|Chris Froome set for Giro dItalia glory despite being spat at by fan         |2018-05-26   |https://www.theguardian.com/sport/2018/may/26/chris-froome-set-for-giro-ditalia-glory-tom-dumoulin                 |Sport  |
-|Chris Froome grabs Giro dItalia lead with extraordinary solo salvo           |2018-05-25   |https://www.theguardian.com/sport/2018/may/25/chris-froome-solo-pink-jersey-giro-ditalia-stage-for-the-ages-cycling|Sport  |
-|Chris Froome wins Giro dItalia in Rome to join cyclings exclusive club       |2018-05-27   |null                                                                                                               |Sport  |
-|Giro dItalia 2018 Froome wins stage 14 Yates extends lead as it happened     |2018-05-19   |https://www.theguardian.com/sport/live/2018/may/19/giro-ditalia-2018-stage-14--monte-zoncolan-simon-yates-live     |Sport  |
-|Chris Froome should not be listed with cycling greats says Hinault           |2018-05-30   |https://www.theguardian.com/sport/2018/may/29/chris-froome-cycling-bernard-hinault-giro-ditalia                    |Sport  |
-+-----------------------------------------------------------------------------+-------------+-------------------------------------------------------------------------------------------------------------------+-------+
-
-
++------------------------------------------------------------------------------+-------------+---------------------------------------------------------------------------------------------------------------+-------+
+|title                                                                         |publishedDate|url                                                                                                            |section|
++------------------------------------------------------------------------------+-------------+---------------------------------------------------------------------------------------------------------------+-------+
+|Super Rugby is gravely ill but its last breath is yet to be taken  Bret Harris|2018-05-22   |https://www.theguardian.com/sport/2018/may/22/super-rugby-is-gravely-ill-but-its-last-breath-is-yet-to-be-taken|Sport  |
+|HR McMaster on rugby The warrior ethos is what a good team has                |2018-05-28   |https://www.theguardian.com/sport/2018/may/28/hr-mcmaster-rugby-warrior-ethos                                  |Sport  |
+|Its in my blood how rugby managed to unite Americas elite                     |2018-06-01   |https://www.theguardian.com/sport/blog/2018/jun/01/famous-american-rugby-players-wales-v-south-africa          |Sport  |
+|Eddie Joness England training methods to come under scrutiny                  |2018-05-31   |https://www.theguardian.com/sport/2018/may/31/eddie-jones-england-training-scrutiny                            |Sport  |
+|Super Rugby player drain looms as New Zealands biggest foe  Bret Harris       |2018-05-14   |https://www.theguardian.com/sport/2018/may/15/super-rugby-player-drain-looms-as-new-zealands-biggest-foe       |Sport  |
+|Russia handed World Cup place as Romania penalised for ineligible player      |2018-05-15   |https://www.theguardian.com/sport/2018/may/15/russia-romania-rugby-world-cup-2019-ineligible-player            |Sport  |
++------------------------------------------------------------------------------+-------------+---------------------------------------------------------------------------------------------------------------+-------+
 ```
 ## How the tool was developed
 

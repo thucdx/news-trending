@@ -30,10 +30,10 @@ import config.ArgParser.newsAppArgParser
 import scala.util.Try
 
 object Main {
-  val newsPath = "input/the_guardian_articles.csv"
-  val newsDstPath = "output/filtered_news.csv"
-  val zooKeeperHost = "localhost:9983"
-  val newsCollection: String = "news"
+//  val newsPath = "input/the_guardian_articles.csv"
+//  val newsDstPath = "output/extracted"
+//  val zooKeeperHost = "localhost:9983"
+//  val newsCollection: String = "news"
 
   def main(args: Array[String]): Unit = {
 
@@ -46,23 +46,18 @@ object Main {
       case Some(config) => {
         val mode = config.mode
         mode match {
-          case "index" => {
+          case "extract" => {
             val runningResult = Try {
               import ss.implicits._
               println(s"\n======================" +
-                s"\nINDEXING NEWS" +
+                s"\nEXTRACTING NEWS TO INDEX TO SOLR" +
                 s"\n\t Input = ${config.inputPath} " +
-                s"\n\t to Solr's collection: ${config.newsCollection} " +
+                s"\n\t Output path: ${config.outputPath} " +
                 s"\n\t all news within: " +
-                s"\n\t\t startDate = ${config.indexingStartDate} " +
-                s"\n\t\t endDate = ${config.indexingEndDate}")
+                s"\n\t\t startDate = ${config.extractStartDate} " +
+                s"\n\t\t endDate = ${config.extractEndDate}")
 
-              val articleDataset = parseFromFile(ss, config.inputPath)
-              val filteredArticleDF = articleDataset.filter(
-                $"publishedDate" >= lit(config.indexingStartDate)
-                  && $"publishedDate" < lit(config.indexingEndDate))
-                .toDF()
-              saveToSolr(ss, config.zkhost, config.newsCollection, filteredArticleDF)
+                saveToCsv(ss, config.inputPath, config.outputPath, config.extractStartDate, config.extractEndDate)
             }.isSuccess
 
             println(s"Result: ${runningResult}")
@@ -76,12 +71,12 @@ object Main {
               s"\n\t Solr's news collection: ${config.newsCollection}" +
               s"\n\t\t startDate = ${config.trendStartDate} " +
               s"\n\t\t endDate = ${config.trendEndDate}" +
-              s"\n\t\t number of topic: ${config.numTopic}" +
-              s"\n\t\t word per topic: ${config.topicWord}" +
-              s"\n\t\t sample related articles: ${config.maxArticle}"
+              s"\n\t\t number of topics: ${config.numTopic}" +
+              s"\n\t\t words per topic: ${config.topicWord}" +
+              s"\n\t\t related articles: ${config.maxArticle}"
             )
 
-            val articleDataset = loadArticleFromSolr(ss, config.zkhost, newsCollection)
+            val articleDataset = loadArticleFromSolr(ss, config.zkhost, config.newsCollection)
 
             val articlesInRange = articleDataset.filter(
               $"publishedDate" >= lit(config.trendStartDate)
@@ -96,7 +91,7 @@ object Main {
               case (topic: RangedTopic, id: Int) => {
                 println("#################################")
                 println(s"Topic ${1 + id} / ${config.numTopic}")
-                showRelatedArticles(ss, topic, config.zkhost, newsCollection, config.maxArticle)
+                showRelatedArticles(ss, topic, config.zkhost, config.newsCollection, config.maxArticle)
               }
             }
           }
@@ -176,9 +171,8 @@ object Main {
     val sdf = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'");
 
     println("Topic word with its weight:")
-    println(rangedTopic.words.zip(
-      rangedTopic.weights.map(e => f"${e}%1.4f")
-    ).toMap)
+    val sortedByWeights = rangedTopic.words.zip(rangedTopic.weights).sortBy(-_._2)
+    println(sortedByWeights.map(e => (e._1, f"${e._2}%1.4f")))
 
     val startDate = sdf.format(rangedTopic.startDate)
     val endDate = sdf.format(rangedTopic.endDate)
@@ -336,6 +330,7 @@ object Main {
       .write
       .format("csv")
       .option("header", "true")
+      .mode("overwrite")
       .save(newsDestPath)
   }
 

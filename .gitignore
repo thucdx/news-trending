@@ -1,7 +1,7 @@
 *.iml
 .idea/
 target
-output
+output/*
 spark-warehouse
 dependency-reduced-pom.xml
 scalastyle-output.xml
